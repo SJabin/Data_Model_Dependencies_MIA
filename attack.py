@@ -1,19 +1,22 @@
+import pandas as pd
+import numpy as np
+
 #------------------------------training------------------------------
     
 def train_target_model(data, save_params=None):    
     tr_acc=0
     label= data.iloc[:,len(data.columns)-1]
     feat = data.iloc[:,0:len(data.columns)-1]
-    while tr_acc<.66:
-        train_x, test_x, train_y,  test_y = train_test_split(feat, label, test_size=0.25, random_state=42)
-        dataset=train_x.reset_index(drop=True), train_y.reset_index(drop=True), test_x.reset_index(drop=True), test_y.reset_index(drop=True)
     
-        output_layer, train_pred_y, test_pred_y, avg_mi, max_mi= train(dataset, epochs=50, batch_size=500, learning_rate=.001, l2_ratio=1e-7, n_hidden=50,  target=True, save_params=save_params)#.01
+    train_x, test_x, train_y,  test_y = train_test_split(feat, label, test_size=0.25, random_state=42)
+    dataset=train_x.reset_index(drop=True), train_y.reset_index(drop=True), test_x.reset_index(drop=True), test_y.reset_index(drop=True)
     
-        tr_acc=accuracy_score(train_y, train_pred_y)
-        ts_acc=accuracy_score(test_y, test_pred_y)
-        print('target:',tr_acc, ts_acc)
-    #print('mi:',avg_mi)
+    output_layer, train_pred_y, test_pred_y, avg_mi, max_mi= train(dataset, epochs=50, batch_size=500, learning_rate=.001, l2_ratio=1e-7, n_hidden=50,  target=True, save_params=save_params)
+    
+    tr_acc=accuracy_score(train_y, train_pred_y)
+    ts_acc=accuracy_score(test_y, test_pred_y)
+    print('target accuracy:',tr_acc, ts_acc)
+
     
     attack_x, attack_y = [], []
     input_var = T.matrix('x')
@@ -40,18 +43,14 @@ def train_target_model(data, save_params=None):
     indist=get_membership_indistinguishability(train_pred_y, test_pred_y)#, datalabel)
     #print('indistinguishability:', indist)
     
+    
     #_TP=TP(test_y,test_pred_y)
     #_FN=FN(test_y,test_pred_y)
     #_FP=FP(test_y,test_pred_y)
     #_TN=TN(test_y,test_pred_y)
-    #Precision = _TP/(_TP+_FP)
-    #Recall = _TP/(_TP+_FN)
-    #Accuracy = (_TP+_TN)/(_TP+_FP+_FN+_TN)
-    #print(_TP, _FN, _FP, _TN, Precision, Recall, Accuracy)
     
     prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary')
     res=avg_mi, max_mi, group,pred,ind, indist, fpr,tpr, roc_auc,prec, rec, f_beta, tr_acc, ts_acc
-    #print(ts_acc)
     
     attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
     _in=np.ones(len(train_x)).reshape(-1,1)
@@ -64,13 +63,7 @@ def train_target_model(data, save_params=None):
     attack_x=attack_x[indices,:]
     attack_y=attack_y[indices]
     classes=classes[indices]
-    
-    '''
-    df=pd.DataFrame(data=attack_x, index=[i for i in range(attack_x.shape[0])], columns=['c'+str(i) for i in range(attack_x.shape[1])])
-    df['membership']=attack_y
-    #print('df:', df)
-    df.to_csv('test_attack.csv', index=False)
-    '''
+        
     return attack_x, attack_y, classes, res  
 
 
@@ -96,7 +89,7 @@ def train_shadow_model(datasets):
         
         tr_score=accuracy_score(train_y, train_pred_y)
         ts_score=accuracy_score(test_y, test_pred_y)
-        print('shadow:', tr_score, ts_score)
+        print('shadow accuracy:', tr_score, ts_score)
                 
         attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
         _in=np.ones(len(train_x)).reshape(-1,1)
@@ -109,12 +102,6 @@ def train_shadow_model(datasets):
     attack_x=attack_x[indices,:]
     attack_y=attack_y[indices]   
     classes=classes[indices]
-    
-    '''
-    df=pd.DataFrame(data=attack_x, index=[i for i in range(attack_x.shape[0])], columns=['c'+str(i) for i in range(attack_x.shape[1])])
-    df['memebrship']=attack_y
-    df.to_csv('train_attack.csv', index=False)
-    '''
     
     return attack_x, attack_y, classes
     
@@ -153,7 +140,7 @@ def train_attack(dataset, classes, test_class_indices):
     score=accuracy_score(true_y, pred_y)
     prec, rec, _, _ = precision_recall_fscore_support(true_y, pred_y, average='binary')
     
-    print('attack:',prec, rec,score)
+    print('attack accuracy:',prec, rec,score)
     
     res=prec,rec, score, c_score
     return res
