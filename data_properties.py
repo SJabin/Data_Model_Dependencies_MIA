@@ -156,9 +156,16 @@ def exp_entropy(data, datasize, toal_feat):
 
 
 exp = ['datasize', 'class', 'feature', 'feature_no', 'entropy']
-#model_exp = ['arch', 'combination', 'mutual_info', 'mia_ind', 'fairness']
-        
-def main(datalabel, exp_type):
+
+#main("Adult2", "datasize")
+def main(datalabel, exp):
+    
+    # for the datasize experiment datasizes varied between [1000, 10000] for Adult dataset
+    # for Purchase and Texas datasizes varied between [10000, 100000]
+    # change the minsize = 10000, maxsize = 100000, step=10000 for Purchase and Texas
+    # for all other experiments datasize is fixed. For Adult, datasize =10000
+    # for Purchase and Texas change datasize = 100000
+    
     filename='C:\\Users\\45054541\\projects\\Cleans\\'+datalabel
     savefile=datalabel+'.csv'
     dt=pd.read_csv(filename+'.csv')
