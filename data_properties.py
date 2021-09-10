@@ -1,3 +1,5 @@
+#Experiments on Data properties
+
 #from classifier import train as train_model, iterate_minibatches
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
@@ -19,6 +21,10 @@ import math
 n_shadow=1
 theano.config.optimizer='fast_compile'
 np.random.seed(50215)
+
+
+from data_utils import get_deafults
+from attack import train_target_model, train_shadow_model, train_attack
 
 #sampling records 
 
