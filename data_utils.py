@@ -1,3 +1,8 @@
+import pandas as pd
+import numpy as np
+
+
+
 def get_deafults(data):
     fetures = data.iloc[:,0:len(data.columns)-1]
     #entropy
