@@ -37,10 +37,14 @@ def get_class_balance(labels):
     
 
 def get_feat_balance(features):
-    
     temp2=features
-    for i in range(0,5): 
-        temp2=temp2[temp2.iloc[:,i]<=.5]
+    if len(features.columns) >= 5:
+        for i in range(0,5): 
+            temp2=temp2[temp2.iloc[:,i]<=.5]
+    else:
+        for i in range(0,len(features.columns)): 
+            temp2=temp2[temp2.iloc[:,i]<=.5]
+        
     indices=list(temp2.index)
     temp2= temp2.reset_index(drop=True)
     balance = int(len(temp2)/ len(features) *100)
