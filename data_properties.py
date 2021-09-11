@@ -176,7 +176,7 @@ def save_results(itr, feat_no, result, savefile):
     
     
 
-exp = ['datasize', 'class', 'feature', 'feature_no', 'entropy']
+exp = ['datasize', 'class', 'feature', 'feat_no', 'entropy']
 
 #main("Adult_std", "datasize")
 def main(datalabel, exp):
