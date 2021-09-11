@@ -96,8 +96,9 @@ def get_indices(trsize, shsize, data, exp, cbal=None, fbal=None, feat_no=None, n
         
     else:
         if exp == 'feat_no' or exp == 'entropy':
+            labels = data['class']
             data = data.iloc[:, 0:feat_no]
-        
+            data['class']=labels
         indices=np.arange(len(data))
         target_indices = random.sample(indices.tolist(),trsize)
         shadow_indices = np.setdiff1d(indices, target_indices)
@@ -235,15 +236,16 @@ def main(datalabel, exp):
         elif exp == 'feat_no':
             print("Exp: No of Features============")
             trsize = shsize = 10000
-            for fsize in range (1, 1, feat_no):
-                result = exp_featno(data,  trsize, shsize, featsize)
+            for fsize in range (1, feat_no, 1):
+                print(fsize)
+                result = exp_featno(data,  trsize, shsize, fsize)
                 save_results(itr, fsize, result, savefile)
             
         elif exp == 'entropy':
             print("Exp: Entropy============")
             trsize = shsize = 10000
-            for fsize in range (1, 1, feat_no):
-                result = exp_entropy(data,  trsize, shsize, featsize)
+            for fsize in range (1, feat_no, 1):
+                result = exp_entropy(data,  trsize, shsize, fsize)
                 save_results(itr, fsize, result, savefile)
         
                
