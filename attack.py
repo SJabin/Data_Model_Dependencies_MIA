@@ -45,23 +45,13 @@ def train_target_model(data, save_params=None):
             fpr.append(all_fpr[i])
             tpr.append(all_tpr[i])
     roc_auc = roc_auc_score(test_y, y_probs)
-
-    #fairness
-    group,pred,ind=get_fairness(train_x,train_y, train_pred_y, test_x, test_y, test_pred_y)# datalabel)
-    #print('fairness:',group, pred, ind)
-    
-    #membership indistinguishability
-    indist=get_membership_indistinguishability(train_pred_y, test_pred_y)#, datalabel)
-    #print('indistinguishability:', indist)
-    
     
     #_TP=TP(test_y,test_pred_y)
     #_FN=FN(test_y,test_pred_y)
     #_FP=FP(test_y,test_pred_y)
     #_TN=TN(test_y,test_pred_y)
     
-    prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary')
-    #res=avg_mi, max_mi, group,pred,ind, indist, 
+    prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary') 
     res = fpr,tpr, roc_auc,prec, rec, f_beta, tr_acc, ts_acc
     
     attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
