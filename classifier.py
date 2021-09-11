@@ -1,3 +1,10 @@
+import numpy as np
+import pandas as pd
+import theano.tensor as T
+import lasagne
+import theano
+from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+
 
 
 def iterate_minibatches(inputs, targets, batch_size, shuffle=False):

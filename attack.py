@@ -1,5 +1,16 @@
 import pandas as pd
 import numpy as np
+from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import classification_report, precision_recall_fscore_support, accuracy_score
+from sklearn.model_selection import train_test_split
+
+import theano.tensor as T
+import lasagne
+import theano
+
+from classifier import train 
+from model_utils import get_fairness, get_membership_indistinguishability
+
 
 #------------------------------training------------------------------
     
@@ -36,7 +47,7 @@ def train_target_model(data, save_params=None):
     roc_auc = roc_auc_score(test_y, y_probs)
 
     #fairness
-    group,pred,ind=get_fairness(train_x,train_y, train_pred_y, feat_no, test_x, test_y, test_pred_y)# datalabel)
+    group,pred,ind=get_fairness(train_x,train_y, train_pred_y, test_x, test_y, test_pred_y)# datalabel)
     #print('fairness:',group, pred, ind)
     
     #membership indistinguishability
@@ -50,7 +61,8 @@ def train_target_model(data, save_params=None):
     #_TN=TN(test_y,test_pred_y)
     
     prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary')
-    res=avg_mi, max_mi, group,pred,ind, indist, fpr,tpr, roc_auc,prec, rec, f_beta, tr_acc, ts_acc
+    #res=avg_mi, max_mi, group,pred,ind, indist, 
+    res = fpr,tpr, roc_auc,prec, rec, f_beta, tr_acc, ts_acc
     
     attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
     _in=np.ones(len(train_x)).reshape(-1,1)
@@ -106,7 +118,7 @@ def train_shadow_model(datasets):
     return attack_x, attack_y, classes
     
 
-def train_attack(dataset, classes, test_class_indices):
+def train_attack(dataset, classes):
     train_x, train_y, test_x, test_y = dataset
 
     train_classes, test_classes = classes
