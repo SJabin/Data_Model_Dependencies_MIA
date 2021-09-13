@@ -153,7 +153,7 @@ def exp_entropy(data,  trsize, shsize, featsize):
 def save_results(itr, feat_no, result, savefile):
     trsize, shsize, defaults, target, atk = result
     
-    fpr,tpr,roc_auc,ts_prec,ts_rec, ts_fbeta, tr_acc, ts_acc=target
+    fpr,tpr,roc_auc,ts_prec,ts_rec, ts_fbeta, tr_acc, ts_acc, _ =target
     atk_prec, atk_rec, atk_acc, class_acc=atk#, c_atk_acc=result
     
     result = str(itr)+','+str(trsize)+','+str(shsize)+','+ str(feat_no)+ ','
@@ -217,30 +217,32 @@ def main(datalabel, exp):
                 save_results(itr, feat_no, result, savefile)
         
         elif exp == 'class':
-            print("Exp: Class Balance============")
+            print("\nExp: Class Balance============")
             trsize = shsize = 10000
             for cbal in range (10, 91, 10):
+                print('Class balance:', cbal)
                 result = exp_classbalance(data, trsize, shsize, cbal)
                 save_results(itr, feat_no, result, savefile)
             
         elif exp == 'feature':
-            print("Exp: Feature Balance============")
+            print("\nExp: Feature Balance============")
             trsize = shsize = 10000
             for fbal in range (10, 91, 10):
+                print('Feature balance:', fbal)
                 result = exp_featurebalance(data, trsize, shsize, fbal)
                 save_results(itr, feat_no, result, savefile)
 
             
         elif exp == 'feat_no':
-            print("Exp: No of Features============")
+            print("\nExp: No of Features============")
             trsize = shsize = 10000
             for fsize in range (1, feat_no, 1):
-                print(fsize)
+                print('No of features:',fsize)
                 result = exp_featno(data,  trsize, shsize, fsize)
                 save_results(itr, fsize, result, savefile)
             
         elif exp == 'entropy':
-            print("Exp: Entropy============")
+            print("\nExp: Entropy============")
             trsize = shsize = 10000
             for fsize in range (1, feat_no, 1):
                 result = exp_entropy(data,  trsize, shsize, fsize)
