@@ -32,7 +32,7 @@ def get_class_balance(labels):
     balance = int(counts[1]/len(labels)*100)
     result=balance, indices
     assert len(indices)==counts[1]
-    print('class balance: ', balance)
+    #print('class balance: ', balance)
     return result
     
 
@@ -48,7 +48,7 @@ def get_feat_balance(features):
     indices=list(temp2.index)
     temp2= temp2.reset_index(drop=True)
     balance = int(len(temp2)/ len(features) *100)
-    print('feature balance: ', balance)
+    #print('feature balance: ', balance)
     result = balance, indices
     
     return result
