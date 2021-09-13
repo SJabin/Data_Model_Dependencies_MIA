@@ -8,14 +8,14 @@ import theano.tensor as T
 import lasagne
 import theano
 
-from models.classifier import train_ANN 
+from models.classifier import train_ANN, train_LR, train_SVC, train_RF, train_KNN, train_stacked
 from utils.model_utils import get_fairness, get_membership_indistinguishability
 
 
 #------------------------------training------------------------------
+# 'model' attribute is to test different target-shadow model combinations
 
 def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate = .001, l2ratio = 1e-7, model ='ANN'):    
-    tr_acc=0
     label= data.iloc[:,len(data.columns)-1]
     feat = data.iloc[:,0:len(data.columns)-1]
     
@@ -24,17 +24,26 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
     
     # target - attack model combinations
     if model=='LR':
-        result = train_LR(dataset, epochs=50, batch_size=500, learning_rate=lrate, l2_ratio=l2ratio, n_hidden=n_hidden, n_layer=n_layer, target=True, save_params=save_params)
-    if model=='SVC':
-    if model=='RF':
-    if model=='KNN':
-    else:   
-        result = train_ANN(dataset, epochs=50, batch_size=500, learning_rate=lrate, l2_ratio=l2ratio, n_hidden=n_hidden, n_layer=n_layer, target=True, save_params=save_params)
+        result = train_LR(dataset)
     
-    if save_params != None:
-        output_layer, train_pred_y, test_pred_y, avg_mi, max_mi = result
+    elif model=='SVC':
+        result = train_SVC(dataset)
+    
+    elif model=='RF':
+        result = train_RF(dataset)
+    
+    elif model=='KNN':
+        result = train_KNN(dataset)
+        
     else:
-        output_layer, train_pred_y, test_pred_y = result
+        result = train_ANN(dataset, epochs=50, batch_size=500, learning_rate=lrate, l2_ratio=l2ratio, n_hidden=n_hidden, n_layer=n_layer, target=True, save_params=save_params)
+        arch = n_layer, n_hidden, lrate, l2ratio
+    
+    # mi: mutual information between records and the parameters
+    if save_params != None:
+        output, train_pred_y, test_pred_y, avg_mi, max_mi = result
+    else:
+        output, train_pred_y, test_pred_y = result
     
     tr_acc=accuracy_score(train_y, train_pred_y)
     ts_acc=accuracy_score(test_y, test_pred_y)
@@ -42,14 +51,23 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
 
     
     attack_x, attack_y = [], []
-    input_var = T.matrix('x')
-    prob = lasagne.layers.get_output(output_layer, input_var, deterministic=True)
-    prob_fn = theano.function([input_var], prob)
     
-    y_probs=prob_fn(test_x)
-    y_probs=y_probs[:,1]
+    # get fpr, tpr, roc_auc, precision, recall and model architecture
+    
+    if model == 'ANN':
+        input_var = T.matrix('x')
+        prob = lasagne.layers.get_output(output, input_var, deterministic=True)
+        prob_fn = theano.function([input_var], prob)
+    
+        y_probs=prob_fn(test_x)
+        y_probs=y_probs[:,1]
+    else:
+        y_probs = output.predict_proba(test_x)
+        y_probs=y_probs[:,1]
+    
     
     all_fpr, all_tpr, all_thresholds = roc_curve(test_y, y_probs, drop_intermediate=True)
+    
     fpr=[]
     tpr=[]
     for i in range(0, len(all_thresholds)):
@@ -58,19 +76,23 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
             tpr.append(all_tpr[i])
     roc_auc = roc_auc_score(test_y, y_probs)
     
-    #_TP=TP(test_y,test_pred_y)
-    #_FN=FN(test_y,test_pred_y)
-    #_FP=FP(test_y,test_pred_y)
-    #_TN=TN(test_y,test_pred_y)
-    
     prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary')
     
+    
+    #To store
     if save_params != None: 
-        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, avg_mi, max_mi
+        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, avg_mi, max_mi    
+    elif model == 'ANN':
+        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, arch
     else:
         res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc
     
-    attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
+    #prepare test dataset for the attack model
+    if model=='ANN':
+        attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
+    else:
+        attack_x = np.vstack((output.predict_proba(train_x), output.predict_proba(test_x)))
+        
     _in=np.ones(len(train_x)).reshape(-1,1)
     _out=np.zeros(len(test_x)).reshape(-1,1)
     attack_y=np.ravel(np.vstack((_in,_out)))
@@ -82,12 +104,12 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
     attack_y=attack_y[indices]
     classes=classes[indices]
         
-    return attack_x, attack_y, classes, res  
+    return attack_x, attack_y, classes, res 
 
 
 
-def train_shadow_model(datasets):
-    
+
+def train_shadow_model(datasets, model = "ANN"):
     data,shadow_all_indices=datasets
     input_var = T.matrix('x')
     attack_x, attack_y = [], []
@@ -101,15 +123,46 @@ def train_shadow_model(datasets):
         
         train_x, test_x, train_y, test_y = train_test_split(shadow_X, shadow_Y, test_size=.25, stratify=shadow_Y)
         data=train_x, train_y, test_x, test_y
-        output_layer, train_pred_y, test_pred_y= train_ANN(data, epochs=10, batch_size=100, learning_rate=.001, l2_ratio=1e-7, n_hidden=50) #.01
-        prob = lasagne.layers.get_output(output_layer, input_var, deterministic=True)
-        prob_fn = theano.function([input_var], prob)
+        
+        #target-attack model combinations
+        if model=='LR':
+            result = train_LR(data)
+            
+        elif model=='SVC':
+            result = train_SVC(data)
+            
+        elif model=='RF':
+            result = train_RF(data)
+            
+        elif model=='KNN':
+            result = train_KNN(data)
+            
+        elif model == 'All':
+            result = train_stacked(data) 
+
+        else:
+            result = train_ANN(data, epochs=10, batch_size=100, learning_rate=.001, l2_ratio=1e-7, n_hidden=50)
+            
+        output, train_pred_y, test_pred_y = result
+    
+        if model == 'ANN':
+            prob = lasagne.layers.get_output(output, input_var, deterministic=True)
+            prob_fn = theano.function([input_var], prob)
         
         tr_score=accuracy_score(train_y, train_pred_y)
         ts_score=accuracy_score(test_y, test_pred_y)
         print('shadow accuracy:', tr_score, ts_score)
                 
-        attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
+        #prepare train dataset for the attack model
+        if model=='ANN':
+            attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
+        else:
+            attack_x = np.vstack((output.predict_proba(train_x), output.predict_proba(test_x)))
+        
+        #attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
+        
+        
+        
         _in=np.ones(len(train_x)).reshape(-1,1)
         _out=np.zeros(len(test_x)).reshape(-1,1)
         attack_y=np.ravel(np.vstack((_in,_out)))
@@ -124,7 +177,7 @@ def train_shadow_model(datasets):
     return attack_x, attack_y, classes
     
 
-def train_attack(dataset, classes, model='ANN'):
+def train_attack(dataset, classes):
     train_x, train_y, test_x, test_y = dataset
 
     train_classes, test_classes = classes
@@ -144,8 +197,7 @@ def train_attack(dataset, classes, model='ANN'):
 
         c_dataset = (c_train_x, c_train_y, c_test_x[:,0:2], c_test_y)
         
-        if model=='ANN':
-            c_train_pred_y, c_test_pred_y= train_ANN(c_dataset, epochs=50, batch_size=500, learning_rate=.0001, l2_ratio=1e-7, n_hidden=5, rtn_layer=False)
+        c_train_pred_y, c_test_pred_y= train_ANN(c_dataset, epochs=50, batch_size=500, learning_rate=.0001, l2_ratio=1e-7, n_hidden=5, rtn_layer=False)
     
         true_y.append(c_test_y)
         pred_y.append(c_test_pred_y)
