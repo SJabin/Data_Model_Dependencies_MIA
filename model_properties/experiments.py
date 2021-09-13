@@ -1,5 +1,3 @@
-#from classifier import train as train_model, iterate_minibatches
-
 from scipy.stats import entropy
 from sklearn.preprocessing import StandardScaler
 
@@ -23,29 +21,26 @@ from models.attack import train_target_model, train_shadow_model, train_attack
 #sampling records 
 
     
-def mia_exec(target_data, shadow_data, shadow_all_indices, layer=1, node=None, lrate=None, l2ratio=None, model = 'ANN', save_params = None):
+def mia_exec(target_data, shadow_data, shadow_all_indices, layer=1, node=None, lrate=None, l2ratio=None, tgt_model='ANN', sh_model='ANN', save_params = None):
     #train target
     
     # model architecture experiments 
     if node != None:
         attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, n_hidden = node)
     
-    if lrate != None:
+    elif lrate != None:
         attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, lrate = lrate)
     
-    if l2ratio != None:
+    elif l2ratio != None:
         attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, l2ratio = l2ratio)
     
-    
-    # target-attack model combinations
-    if model == 'ALL':
-        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data)#, n_layer=layer, l2ratio = l2ratio)
     else:
-        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, model=model)
+        #train target
+        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, model=tgt_model)
 
     #train shadow
     shadow_dataset=shadow_data, shadow_all_indices
-    attack_train_x, attack_train_y, train_classes = train_shadow_model(shadow_dataset)
+    attack_train_x, attack_train_y, train_classes = train_shadow_model(shadow_dataset, model = sh_model)
             
     #train attack
     attack_datasets=attack_train_x, attack_train_y, attack_test_x, attack_test_y
@@ -127,61 +122,59 @@ def get_indices(trsize, shsize, data, exp=None, n_shadow=1):
 def exp_arch(data, trsize, shsize, layer, node=None, lrate=None, l2ratio=None):    
     target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data)
     defaults = get_deafults(target_data)
-    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices, layer = layer, node = node, lrate = lrate, l2ratio = l2ratio)
+    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices, layer = layer, node = node, lrate = lrate, l2ratio = l2ratio)    
     return trsize, shsize, defaults, target, atk
-    
-    
-def exp_combination(data, trsize, shsize, layer, model):
+
+def exp_combination(data, trsize, shsize, tgt_model='ANN', sh_model='ANN'):
     target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data)
     defaults = get_deafults(target_data)
-    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices, model = model)
+    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices, tgt_model=tgt_model, sh_model=sh_model)
     return trsize, shsize, defaults, target, atk
 
-def exp_classbalance(data, trsize, shsize, cbal):
-    target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data, exp='class', cbal = cbal)               
-    defaults = get_deafults(target_data)
-    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices)
-    return trsize, shsize, defaults, target, atk
-
-def exp_featurebalance(data, trsize, shsize, fbal):
-
-    target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data, exp='feature', fbal = fbal) 
-    defaults = get_deafults(target_data)
-    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices)
-    return trsize, shsize, defaults, target, atk
-        
-def exp_featno(data,  trsize, shsize, featsize):
-    target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data, exp='feat_no', feat_no = featsize)
-    defaults = get_deafults(target_data)
-    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices)
-    return trsize, shsize, defaults, target, atk
-
-def exp_entropy(data,  trsize, shsize, featsize):
-    #measured entropy over datasets with different feature size
-    return exp_featno(data,  trsize, shsize, featsize)
 
 
-def save_results(itr, result, savefile):
+def save_arch_results(itr, result, savefile):
+    trsize, shsize, defaults, target, atk = result
+    fpr, tpr, roc_auc, ts_prec, ts_rec, ts_fbeta, tr_acc, ts_acc, arch = target
+    layer, node, lrate, l2ratio = arch
+    atk_prec, atk_rec, atk_acc, class_acc= atk
+    
+    result = str(itr)+','+str(layer)+','+str(node)+','+str(lrate)+','+ str(l2ratio)+ ','
+    result += str(ts_prec)+','+str(ts_rec)+','+str(tr_acc)+','+str(ts_acc)+','+str(roc_auc)+','            
+    result += str(atk_prec)+','+str(atk_rec)+','+str(atk_acc)#+','+ str(class_acc[0])+','+ str(class_acc[0])
+    
+    write(result, savefile)
+    
+def save_combination_results(itr, tgt_model, sh_model, result, savefile):
     trsize, shsize, defaults, target, atk = result
     
-    fpr,tpr,roc_auc,ts_prec,ts_rec, ts_fbeta, tr_acc, ts_acc=target
-    atk_prec, atk_rec, atk_acc, class_acc=atk#, c_atk_acc=result
+    if tgt_model =='ANN':
+        fpr, tpr, roc_auc, ts_prec, ts_rec, ts_fbeta, tr_acc, ts_acc, _ = target
+    else:
+        fpr, tpr, roc_auc, ts_prec, ts_rec, ts_fbeta, tr_acc, ts_acc = target
+    #layer, node, lrate, l2ratio = arch
+    atk_prec, atk_rec, atk_acc, class_acc= atk
     
-    result = str(itr)+','+str(trsize)+','+str(shsize)+','#+ str(feat_no)+ ','
-    result += str(ts_prec)+','+str(ts_rec)+','+str(tr_acc)+','+str(ts_acc)+','+str(roc_auc)+','
-
-#                 for j in range(0, len(fpr)):
-#                     result+='fpr'+str(fpr[j])+','
-#                 for j in range(0, len(tpr)):
-#                     result+='tpr'+str(tpr[j])+','
-            
-    result+=str(atk_prec)+','+str(atk_rec)+','+str(atk_acc)#+','+ str(class_acc[0])+','+ str(class_acc[0])
-
+    #result = str(itr)+','+str(layer)+','+str(node)+','+str(lrate)+','+ str(l2ratio)+ ','
+    result = str(itr)+','+str(tgt_model)+','+str(sh_model)+','
+    result += str(ts_prec)+','+str(ts_rec)+','+str(tr_acc)+','+str(ts_acc)+','+str(roc_auc)+','            
+    result += str(atk_prec)+','+str(atk_rec)+','+str(atk_acc)#+','+ str(class_acc[0])+','+ str(class_acc[0])
+    
+    write(result, savefile)
+    
+def write(result, savefile):
     text_file=open(savefile, 'a')
     text_file.write(result)
     text_file.write('\n')
     text_file.close()
     
+
+
+    
+
+
+
+
     
     
     
@@ -205,10 +198,11 @@ def main(datalabel, exp):
             # NN -> 1 to 5 hidden layers
             for layer in range(1,6):
                 print("\nhidden layers: ", layer)
+                
                 for node in nodes: 
-                    print("\nnodes per layer: ", node)
+                    print("nodes per layer: ", node)
                     result = exp_arch(data, trsize, shsize, layer, node=node)
-                    save_results(itr, result, savefile)
+                    save_arch_results(itr, result, savefile)
                 
         if exp == 'l_rates':
             print("\nExp: learning rates============")
@@ -218,9 +212,9 @@ def main(datalabel, exp):
             for layer in range(1,6):
                 print("\nhidden layers: ", layer)
                 for lrate in lrates: 
-                    print("\nlearning rate: ", lrate)
+                    print("learning rate: ", lrate)
                     result = exp_arch(data, trsize, shsize, layer, lrate=lrate)
-                    save_results(itr, result, savefile)
+                    save_arch_results(itr, result, savefile)
             
         if exp == 'l2_ratios':
             print("\nExp: L2 ratios============")
@@ -230,19 +224,22 @@ def main(datalabel, exp):
             for layer in range(1,6):
                 print("\nhidden layers: ", layer)
                 for l2ratio in l2ratios: 
-                    print("\nl2 ratio: ", l2ratio)
+                    print("l2 ratio: ", l2ratio)
                     result = exp_arch(data, trsize, shsize, layer, l2ratio=l2ratio)
-                    save_results(itr, result, savefile)
+                    save_arch_results(itr, result, savefile)
 
         
-        elif exp == 'combination':
-            print("Exp: Model-model Combinations============")
-            models = ['ANN', 'LR', 'SVC', 'RF', 'KNN', 'ALL']
+        elif exp == 'model_combine':
+            print("Exp: Target - shadow model Combinations============")
+            tgt_models = [ 'ANN', 'LR', 'SVC', 'RF', 'KNN']
+            sh_models = ['ANN', 'LR', 'SVC', 'RF', 'KNN','All'] 
             
-            for model in models:
-                print("\nl2 ratio: ", l2ratio)
-                    result = exp_combination(data, trsize, shsize, layer, model=model)
-                    save_results(itr, result, savefile)
+            for tmodel in tgt_models:
+                for smodel in sh_models:
+                    print("\ntarget model: ", tmodel)
+                    print("shadow model: ", smodel)
+                    result = exp_combination(data, trsize, shsize, tgt_model=tmodel, sh_model=smodel)
+                    save_combination_results(itr, tmodel, smodel, result, savefile)
             
 
         elif exp == 'mutual_info':
