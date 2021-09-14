@@ -5,18 +5,22 @@ Citation: Tonni, S. M., Vatsalan, D., Farokhi, F., Kaafar, D., Lu, Z., & Tangari
 
 # Prerequisites
 
-Run the script.sh file for installing all the prerequisite python packages.
+Run the script.sh file for installing all the prerequisite python packages. Required packages:
+
+1. Python 3.5
+2. Theano 1.0.5
+3. Lasagne 0.2
 
 # Experiments on the Data Properties
 
 To run experiments call 'main()' from the data_properties\experiments.py.
 
-Available experiments:
-1. Datasizes vs MIA
-2. Class balance vs MIA
-3. Feature balance vs MIA
-4. No of fetaures vs MIA
-5. Entropy vs MIA
+We explore below data properties against MIA:
+1. Datasize  
+2. Class balance 
+3. Feature balance
+4. No of fetaures
+5. Entropy
 
 # Experiments on the Model Properties
 
