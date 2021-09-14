@@ -9,7 +9,7 @@ Run the script.sh file for installing all the prerequisite python packages.
 
 # Experiments on the Data Properties
 
-To run experiments go to the data_properties\experiments.py.
+To run experiments call 'main()' from the data_properties\experiments.py.
 
 Available experiments:
 1. Datasizes vs MIA
@@ -20,7 +20,7 @@ Available experiments:
 
 # Experiments on the Model Properties
 
-To run experiments go to the model_properties\experiments.py.
+To run experiments call 'main()' from the model_properties\experiments.py. 
 
 Available experiments:
 1. Model architecture
