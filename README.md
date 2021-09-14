@@ -22,4 +22,20 @@ Available experiments:
 
 To run experiments go to the model_properties\experiments.py.
 
+Available experiments:
+1. Model architecture
+
+* Number of hidden layers
+* Number of nodes per layer
+* Different learning rates
+* Different l2-ratios
+
+3. Target-shadow model combintaion
+
+* Added target models : ['ANN', 'LR', 'SVC', 'RF', 'KNN']
+* Added shadow models: ['ANN', 'LR', 'SVC', 'RF', 'KNN', 'All']. 'All' is the shadow model after stacking all 5 models together using scikit-learn's StackingClassifier. 
+
+5. Fairness [ TO DO ]
+6. MIA-Indistinguishability [ TO DO ] 
+
 # Evaluating the Regularizers
