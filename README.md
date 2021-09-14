@@ -33,7 +33,7 @@ Available experiments:
 3. Target-shadow model combintaion
 
 * Added target and shadow models : Artifical Neural Network (ANN), Logistic Regression (LR), Support Vector Classifier (SVC), Random Forest (RF), K-nearest Neighbors Classifier (KNN).
-* Also, added a stacked shadow model ('All') after stacking all 5 experimented models together using scikit-learn's StackingClassifier. 
+* Also, added a stacked shadow model (denoted as 'All') after stacking all 5 experimented models together using scikit-learn's StackingClassifier. 
 
 5. Fairness [ TO DO ]
 6. MIA-Indistinguishability [ TO DO ] 
