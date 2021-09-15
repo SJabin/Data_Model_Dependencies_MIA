@@ -26,13 +26,17 @@ def mia_exec(target_data, shadow_data, shadow_all_indices, layer=1, node=None, l
     
     # model architecture experiments 
     if node != None:
-        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, n_hidden = node)
+        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, n_hidden=node)
     
     elif lrate != None:
-        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, lrate = lrate)
+        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, lrate=lrate)
     
     elif l2ratio != None:
-        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, l2ratio = l2ratio)
+        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, n_layer=layer, l2ratio=l2ratio)
+        
+    # mutual information between records and model parameters
+    elif save_params != None:
+        attack_test_x, attack_test_y, test_classes, target_results= train_target_model(target_data, model=tgt_model, save_params=save_params)
     
     else:
         #train target
@@ -131,6 +135,12 @@ def exp_combination(data, trsize, shsize, tgt_model='ANN', sh_model='ANN'):
     target, atk = mia_exec(target_data, shadow_data, shadow_all_indices, tgt_model=tgt_model, sh_model=sh_model)
     return trsize, shsize, defaults, target, atk
 
+def exp_mutual_info(data, trsize, shsize, save_params):
+    target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data)
+    defaults = get_deafults(target_data)
+    target, atk = mia_exec(target_data, shadow_data, shadow_all_indices, save_params=save_params)
+    return trsize, shsize, defaults, target, atk
+
 
 
 def save_arch_results(itr, result, savefile):
@@ -162,6 +172,18 @@ def save_combination_results(itr, tgt_model, sh_model, result, savefile):
     
     write(result, savefile)
     
+def save_mi_results(itr, result, savefile):
+    trsize, shsize, defaults, target, atk = result
+    
+    fpr,tpr, roc_auc, ts_prec, ts_rec, ts_fbeta, tr_acc, ts_acc, avg_mi, max_mi = target
+    atk_prec, atk_rec, atk_acc, class_acc= atk
+    
+    result = str(itr)+','+str(avg_mi)+','+str(max_mi)+','
+    result += str(ts_prec)+','+str(ts_rec)+','+str(tr_acc)+','+str(ts_acc)+','+str(roc_auc)+','            
+    result += str(atk_prec)+','+str(atk_rec)+','+str(atk_acc)#+','+ str(class_acc[0])+','+ str(class_acc[0])
+    
+    write(result, savefile)
+    
 def write(result, savefile):
     text_file=open(savefile, 'a')
     text_file.write(result)
@@ -172,15 +194,8 @@ def write(result, savefile):
 
     
 
-
-
-
-    
-    
-    
-
 #exp = ['n_nodes','l_rates', 'l2_ratios', 'combination', 'mutual_info', 'mia_ind', 'fairness']
-# Experiments on the n_nodes, l_rates, l2_ratios are done on ANNs having 1 to 5 hidden layers.
+
 
 def main(datalabel, exp):
     filename='./'+datalabel+'.csv'
@@ -191,6 +206,7 @@ def main(datalabel, exp):
     for itr in range(0,2):
         print("\nIteration: ", itr)
         
+        # Experiments on the n_nodes, l_rates, l2_ratios are performed on ANNs having 1 to 5 hidden layers.
         if exp == 'n_nodes':            
             print("\nExp: number of nodes============")
             nodes = [ 5, 50, 100, 500, 1000 ]
@@ -217,7 +233,7 @@ def main(datalabel, exp):
                     save_arch_results(itr, result, savefile)
             
         if exp == 'l2_ratios':
-            print("\nExp: L2 ratios============")
+            print("\nExp: l2 ratios============")
             l2ratios = [ 0, .001, .01, .1, 1, 2, 3 ]
             
             # NN -> 1 to 5 hidden layers
@@ -230,7 +246,7 @@ def main(datalabel, exp):
 
         
         elif exp == 'model_combine':
-            print("Exp: Target - shadow model Combinations============")
+            print("Exp: target - shadow model Combinations============")
             tgt_models = [ 'ANN', 'LR', 'SVC', 'RF', 'KNN']
             sh_models = ['ANN', 'LR', 'SVC', 'RF', 'KNN','All'] 
             
@@ -241,10 +257,12 @@ def main(datalabel, exp):
                     result = exp_combination(data, trsize, shsize, tgt_model=tmodel, sh_model=smodel)
                     save_combination_results(itr, tmodel, smodel, result, savefile)
             
-
+        #I_x : mutual information between the records and the model's parameters
         elif exp == 'mutual_info':
-            print("Exp: Mutual Information============")
-
+            save_params = str(itr), savefile
+            print("Exp: Mutual Information between the records and model parameters")
+            result = exp_mutual_info(data, trsize, shsize, save_params)
+            save_mi_results(itr, result, savefile)
             
         elif exp == 'mia_ind':
             print("Exp: MIA Indistinguishability============")
