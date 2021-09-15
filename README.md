@@ -38,7 +38,7 @@ Available experiments:
 
 * Added target and shadow models : Artifical Neural Network (ANN), Logistic Regression (LR), Support Vector Classifier (SVC), Random Forest (RF), K-nearest Neighbors Classifier (KNN).
 * Also, added a stacked shadow model (denoted as 'All') after stacking all 5 experimented models together using scikit-learn's StackingClassifier. 
-
+4. Mutual Information between Records and Model Parameters
 5. Fairness [ TO DO ]
 6. MIA-Indistinguishability [ TO DO ] 
 
