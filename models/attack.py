@@ -39,7 +39,7 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
         result = train_ANN(dataset, epochs=50, batch_size=500, learning_rate=lrate, l2_ratio=l2ratio, n_hidden=n_hidden, n_layer=n_layer, target=True, save_params=save_params)
         arch = n_layer, n_hidden, lrate, l2ratio
     
-    # mi: mutual information between records and the parameters
+    # mutual information between records and the parameters
     if save_params != None:
         output, train_pred_y, test_pred_y, avg_mi, max_mi = result
     else:
@@ -79,13 +79,14 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
     prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary')
     
     
-    #To store
+    # Values to store
     if save_params != None: 
         res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, avg_mi, max_mi    
     elif model == 'ANN':
         res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, arch
     else:
         res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc
+    
     
     #prepare test dataset for the attack model
     if model=='ANN':
@@ -158,10 +159,6 @@ def train_shadow_model(datasets, model = "ANN"):
             attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
         else:
             attack_x = np.vstack((output.predict_proba(train_x), output.predict_proba(test_x)))
-        
-        #attack_x=np.vstack((prob_fn(train_x), prob_fn(test_x)))
-        
-        
         
         _in=np.ones(len(train_x)).reshape(-1,1)
         _out=np.zeros(len(test_x)).reshape(-1,1)
