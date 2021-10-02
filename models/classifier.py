@@ -13,8 +13,10 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.base import ClassifierMixin
 from sklearn.base import BaseEstimator
 
+from utils.model_utils import get_fairness, get_mia_indistinguishability
 
-def train_ANN (dataset, epochs, batch_size, n_hidden, learning_rate, l2_ratio, n_layer = 1, activation='tanh',rtn_layer=True, target=False, save_params=None):
+
+def train_ANN (dataset, epochs, batch_size, n_hidden, learning_rate, l2_ratio, n_layer = 1, activation='tanh',rtn_layer=True, save_params=None, mia_ind = False, fairness= False):
     train_x= dataset[0]
     train_y= dataset[1]
     test_x= dataset[2]
@@ -25,8 +27,8 @@ def train_ANN (dataset, epochs, batch_size, n_hidden, learning_rate, l2_ratio, n
     train_pred_y = model.predict(train_x)
     test_pred_y = model.predict(test_x)
     
-    
-    if target and save_params != None:
+
+    if save_params != None:
         st, savefile = save_params
         par = model.params[0].get_value()
         #print('par:', par)
@@ -42,7 +44,7 @@ def train_ANN (dataset, epochs, batch_size, n_hidden, learning_rate, l2_ratio, n
             st1+=',avg_'+str(par[i].sum()/len(par[i]))
             st1+=',max_'+str(max(par[i]))+'\n'
             coefs.append(max(par[i]))
-            
+                
             text_file=open('params_'+savefile, 'a')
             text_file.write(st1)
             text_file.close()
@@ -58,10 +60,19 @@ def train_ANN (dataset, epochs, batch_size, n_hidden, learning_rate, l2_ratio, n
         max_mi=max(mi)
         print('avg_mi: ', avg_mi)
         print('max_mi: ', max_mi)
+            
+        result = avg_mi, max_mi
+    
+    if mia_ind:
+        result=get_mia_indistinguishability(train_pred_y, test_pred_y)
+        
+    if fairness:
+        group_diff,pred_diff,ind_diff=get_fairness(train_x,train_y, train_pred_y, test_x, test_y, test_pred_y)
+        result = group_diff,pred_diff,ind_diff
     
     if rtn_layer:
-        if target and save_params != None: 
-            data= model.output_layer, train_pred_y, test_pred_y, avg_mi, max_mi
+        if save_params != None or mia_ind or fairness: 
+            data= model.output_layer, train_pred_y, test_pred_y, result
         else:
             data= model.output_layer, train_pred_y, test_pred_y
     else:
@@ -264,7 +275,7 @@ class ANN(ClassifierMixin, BaseEstimator):
         return pred_y
 
 
-# For target models vs shadow models ; 
+# For target model vs shadow models ; 
 # Stacked shadow model -> 'All'
 def train_stacked(dataset, rtn_layer = True):
     train_x= dataset[0]

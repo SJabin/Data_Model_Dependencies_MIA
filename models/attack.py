@@ -9,41 +9,39 @@ import lasagne
 import theano
 
 from models.classifier import train_ANN, train_LR, train_SVC, train_RF, train_KNN, train_stacked
-from utils.model_utils import get_fairness, get_membership_indistinguishability
+
 
 
 #------------------------------training------------------------------
-# 'model' attribute is to test different target-shadow model combinations
-
-def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate = .001, l2ratio = 1e-7, model ='ANN'):    
+def train_target_model(data, n_layer=1, n_hidden = 50, lrate = .001, l2ratio = 1e-7, model ='ANN', save_params=None, arch = False, mia_ind = False, fairness = False):    
     label= data.iloc[:,len(data.columns)-1]
     feat = data.iloc[:,0:len(data.columns)-1]
     
     train_x, test_x, train_y,  test_y = train_test_split(feat, label, test_size=0.25, random_state=42)
     dataset=train_x.reset_index(drop=True), train_y.reset_index(drop=True), test_x.reset_index(drop=True), test_y.reset_index(drop=True)
     
-    # target - attack model combinations
+    # for different target - shadow model combinations
     if model=='LR':
-        result = train_LR(dataset)
+        train_result = train_LR(dataset)
     
     elif model=='SVC':
-        result = train_SVC(dataset)
+        train_result = train_SVC(dataset)
     
     elif model=='RF':
-        result = train_RF(dataset)
+        train_result = train_RF(dataset)
     
     elif model=='KNN':
-        result = train_KNN(dataset)
+        train_result = train_KNN(dataset)
         
     else:
-        result = train_ANN(dataset, epochs=50, batch_size=500, learning_rate=lrate, l2_ratio=l2ratio, n_hidden=n_hidden, n_layer=n_layer, target=True, save_params=save_params)
-        arch = n_layer, n_hidden, lrate, l2ratio
+        train_result = train_ANN(dataset, epochs=50, batch_size=500, learning_rate=lrate, l2_ratio=l2ratio, n_hidden=n_hidden, n_layer=n_layer, save_params=save_params, mia_ind = mia_ind, fairness = fairness)
+        architecture = n_layer, n_hidden, lrate, l2ratio
     
-    # mutual information between records and the parameters
-    if save_params != None:
-        output, train_pred_y, test_pred_y, avg_mi, max_mi = result
+    # additional measured results
+    if save_params != None or mia_ind or fairness:
+        output, train_pred_y, test_pred_y, result = train_result
     else:
-        output, train_pred_y, test_pred_y = result
+        output, train_pred_y, test_pred_y = train_result
     
     tr_acc=accuracy_score(train_y, train_pred_y)
     ts_acc=accuracy_score(test_y, test_pred_y)
@@ -79,13 +77,27 @@ def train_target_model(data, save_params=None, n_layer=1, n_hidden = 50, lrate =
     prec, rec, f_beta, _ = precision_recall_fscore_support(test_y, test_pred_y, average='binary')
     
     
-    # Values to store
-    if save_params != None: 
-        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, avg_mi, max_mi    
-    elif model == 'ANN':
-        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, arch
+    #'mutual_info' experiment
+    if save_params != None:
+        avg_mi, max_mi = result
+        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, avg_mi, max_mi
+        
+    #'mia_indistinguishability' experiment
+    elif mia_ind:
+        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, result
+    
+    # 'fariness' experiment
+    elif fairness:
+        group_diff, pred_diff, ind_diff = result
+        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, group_diff, pred_diff, ind_diff
+        
+    # 'model architechture' experiment
+    elif arch:
+        res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc, architecture
+        
     else:
         res = fpr,tpr, roc_auc, prec, rec, f_beta, tr_acc, ts_acc
+        
     
     
     #prepare test dataset for the attack model
@@ -125,7 +137,7 @@ def train_shadow_model(datasets, model = "ANN"):
         train_x, test_x, train_y, test_y = train_test_split(shadow_X, shadow_Y, test_size=.25, stratify=shadow_Y)
         data=train_x, train_y, test_x, test_y
         
-        #target-attack model combinations
+        #for different target-shadow model combinations
         if model=='LR':
             result = train_LR(data)
             
