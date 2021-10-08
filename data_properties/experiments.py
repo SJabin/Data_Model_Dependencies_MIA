@@ -10,6 +10,7 @@ import pandas as pd
 import lasagne
 import theano
 
+#number of shadow models
 n_shadow=1
 theano.config.optimizer='fast_compile'
 np.random.seed(50215)
@@ -116,15 +117,6 @@ def exp_datasize(data, trsize, shsize):
         defaults = get_deafults(target_data)
         target, atk = mia_exec(target_data, shadow_data, shadow_all_indices)
         return trsize, shsize, defaults, target, atk
-    
-    
-# def exp_shadowsize():    
-#     for shsize in range (minsize, maxsize+1, step):
-#         trsize=minsize
-#         target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data, exptype='datasize')
-#         defaults= get_deafults(target_data)
-#         target, atk = mia_exec(target_data, shadow_data, shadow_all_indices)
-#         return trsize, shsize, defaults, target, atk
 
 def exp_classbalance(data, trsize, shsize, cbal):
     target_data, shadow_data, shadow_all_indices = get_indices(trsize, shsize, data, exp='class', cbal = cbal)               
@@ -153,7 +145,7 @@ def exp_entropy(data,  trsize, shsize, featsize):
 def save_results(itr, feat_no, result, savefile):
     trsize, shsize, defaults, target, atk = result
     
-    fpr,tpr,roc_auc,ts_prec,ts_rec, ts_fbeta, tr_acc, ts_acc, _ =target
+    fpr,tpr,roc_auc,ts_prec,ts_rec, ts_fbeta, tr_acc, ts_acc=target
     atk_prec, atk_rec, atk_acc, class_acc=atk#, c_atk_acc=result
     
     result = str(itr)+','+str(trsize)+','+str(shsize)+','+ str(feat_no)+ ','
@@ -178,30 +170,41 @@ def save_results(itr, feat_no, result, savefile):
 #exp = ['datasize', 'class', 'feature', 'feat_no', 'entropy']
 
 
+# datasizes for the experiment on different datasizes
+# for the datasize experiment datasizes varied between [1000, 10000] for Adult dataset
+# for Purchase and Texas datasizes varied between [10000, 100000]
+# change the minsize = 10000, maxsize = 100000, step=10000 for Purchase and Texas
+
+minsize =1000
+maxsize = 10000
+step=5000
+
+# for all other experiments datasize is fixed. For Adult, datasize =10000
+# for Purchase and Texas change datasize = 100000
+
+trsize = shsize = 10000
+
+# class balances are measured from 10% to 90% over the selected label
+# feature balances are measured from 10% to 90% over the selected record group
+# for generating different data entropy, number of features are varied
+
+
+# path for the dataset
+filepath = './'
+
 def main(datalabel, exp):
-    
-    # for the datasize experiment datasizes varied between [1000, 10000] for Adult dataset
-    # for Purchase and Texas datasizes varied between [10000, 100000]
-    # change the minsize = 10000, maxsize = 100000, step=10000 for Purchase and Texas
-    # for all other experiments datasize is fixed. For Adult, datasize =10000
-    # for Purchase and Texas change datasize = 100000
-    
-    
-    filename='./'+datalabel+'.csv'
+    filename=filepath+datalabel+'.csv'
     savefile=exp+'_'+datalabel+'.csv'
     data=pd.read_csv(filename)
     feat_no=len(data.columns) - 1
     
-    for itr in range(0,2):
+    
+    for itr in range(0,100):
         print("\nIteration: ", itr)
         
         if exp == 'datasize':
             
-            print("\nExp: Datasize============")
-            minsize =1000
-            maxsize = 10000
-            step=5000
-            
+            print("\nExp: Datasize============")           
             print("\nVarying target size\n")
             for trsize in range (minsize, maxsize+1, step):
                 shsize=minsize
@@ -217,33 +220,27 @@ def main(datalabel, exp):
                 save_results(itr, feat_no, result, savefile)
         
         elif exp == 'class':
-            print("\nExp: Class Balance============")
-            trsize = shsize = 10000
+            print("Exp: Class Balance============")
             for cbal in range (10, 91, 10):
-                print('Class balance:', cbal)
                 result = exp_classbalance(data, trsize, shsize, cbal)
                 save_results(itr, feat_no, result, savefile)
             
         elif exp == 'feature':
-            print("\nExp: Feature Balance============")
-            trsize = shsize = 10000
+            print("Exp: Feature Balance============")
             for fbal in range (10, 91, 10):
-                print('Feature balance:', fbal)
                 result = exp_featurebalance(data, trsize, shsize, fbal)
                 save_results(itr, feat_no, result, savefile)
 
             
         elif exp == 'feat_no':
-            print("\nExp: No of Features============")
-            trsize = shsize = 10000
+            print("Exp: No of Features============")
             for fsize in range (1, feat_no, 1):
-                print('No of features:',fsize)
+                print(fsize)
                 result = exp_featno(data,  trsize, shsize, fsize)
                 save_results(itr, fsize, result, savefile)
             
         elif exp == 'entropy':
-            print("\nExp: Entropy============")
-            trsize = shsize = 10000
+            print("Exp: Entropy============")
             for fsize in range (1, feat_no, 1):
                 result = exp_entropy(data,  trsize, shsize, fsize)
                 save_results(itr, fsize, result, savefile)
